@@ -203,13 +203,14 @@ public class AutoScaler {
                         System.out.println("[Monitor] Sleeping for " + sleepDuration + "ms...");
                         Thread.sleep(sleepDuration);
 
-                        SampleCriteria sampleCriteria = SampleCriteria.create();
-                        for (Server server : dataCenters) {
-                            sampleCriteria.add("id", SampleCriteria.Oper.EQUALS, server.getId());
-                        }
+//                        SampleCriteria sampleCriteria = SampleCriteria.create();
+//                        for (Server server : dataCenters) {
+//                            sampleCriteria.add("id", SampleCriteria.Oper.EQUALS, server.getId());
+//                        }
 
                         double statAvg = 0;
-                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", sampleCriteria);
+                        //List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", sampleCriteria);
+                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util");
                         for (Statistics statistics : stats) {
                             System.out.println(statistics);
                             statAvg += statistics.getAvg();
