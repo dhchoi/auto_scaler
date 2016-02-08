@@ -7,10 +7,12 @@ import org.openstack4j.model.compute.Flavor;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.ServerCreate;
 import org.openstack4j.model.image.Image;
+import org.openstack4j.model.telemetry.SampleCriteria;
+import org.openstack4j.model.telemetry.Statistics;
 import org.openstack4j.openstack.OSFactory;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * AutoScaling server
@@ -21,7 +23,7 @@ public class AutoScaler {
      * OpenStack4j configuration
      */
     private static OSClient os;
-    private static List<Server> dataCenters = new ArrayList<>();
+    private static List<Server> dataCenters = new CopyOnWriteArrayList<>();
 
     /**
      * ASG Variables
@@ -40,6 +42,8 @@ public class AutoScaler {
     private static int EVAL_COUNT;
     private static long COOLDOWN; // milliseconds
     private static int DELTA;
+    private static int SCALE_OUT_HIT_CNT = 0;
+    private static int SCALE_IN_HIT_CNT = 0;
 
     /**
      * Main function
@@ -112,20 +116,7 @@ public class AutoScaler {
         /*
          * Launch data centers
          */
-        for (int i = 0; i < MIN_INSTANCE; i++) {
-            Server dataCenter = launchDataCenter();
-            System.out.print("Waiting for data center " + dataCenter.getId() + " to become active.");
-            while (os.compute().servers().get(dataCenter.getId()).getStatus() != Server.Status.ACTIVE) {
-                try {
-                    Thread.sleep(3000);
-                    System.out.print(".");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            System.out.println("\nSuccessfully launched data center.");
-            dataCenters.add(dataCenter);
-        }
+        launchDataCenters(MIN_INSTANCE);
 
         // list all running servers
         System.out.println("/********** All Running Instances **********/");
@@ -145,15 +136,100 @@ public class AutoScaler {
     }
 
     /**
-     * Launches a Data Center
-     *
-     * @return the launched DC
+     * Launches specified number of Data Centers
      */
-    private static Server launchDataCenter() {
-        // Create a Server Model Object
-        ServerCreate sc = Builders.server().name(ASG_NAME).flavor(ASG_FLAVOR_ID).image(ASG_IMAGE_ID).build();
+    private static void launchDataCenters(int num) {
+        for (int i = 0; i < num; i++) {
+            // create a Server Model Object
+            ServerCreate sc = Builders.server().name(ASG_NAME).flavor(ASG_FLAVOR_ID).image(ASG_IMAGE_ID).build();
+            // boot the Server
+            Server dataCenter = os.compute().servers().boot(sc);
+            dataCenters.add(dataCenter);
 
-        // Boot the Server
-        return os.compute().servers().boot(sc);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (os.compute().servers().get(dataCenter.getId()).getStatus() != Server.Status.ACTIVE) {
+                        try {
+                            System.out.println("Waiting for data center " + dataCenter.getId() + " to become active.");
+                            Thread.sleep(3000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    System.out.println("Successfully launched data center " + dataCenter.getId());
+                    // TODO: add to load balancer
+                }
+            }).start();
+        }
+    }
+
+    /**
+     * Deletes specified number of Data Centers
+     */
+    private static void deleteDataCenters(int num) {
+        for (int i = 0; i < num; i++) {
+            // get the latest data center
+            Server dataCenter = dataCenters.remove(dataCenters.size() - 1);
+            // delete the data center
+            os.compute().servers().delete(dataCenter.getId());
+            // TODO: remove from load balancer
+        }
+    }
+
+    private static void startMonitoring() {
+        new Thread(new Runnable() {
+            private long sleepDuration = EVAL_PERIOD;
+
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        System.out.println("[Monitor] Sleeping for " + sleepDuration + "ms...");
+                        Thread.sleep(sleepDuration);
+
+                        SampleCriteria sampleCriteria = SampleCriteria.create();
+                        for (Server server : dataCenters) {
+                            sampleCriteria.add("id", SampleCriteria.Oper.EQUALS, server.getId());
+                        }
+
+                        double statAvg = 0;
+                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", sampleCriteria);
+                        for (Statistics statistics : stats) {
+                            System.out.println(statistics);
+                            statAvg += statistics.getAvg();
+                        }
+                        statAvg = statAvg / stats.size();
+                        System.out.println("[Monitor] cpu_util=" + statAvg);
+
+                        if (statAvg > CPU_UPPER_TRES) {
+                            System.out.println("[Monitor] stat is above CPU_UPPER_TRES=" + CPU_UPPER_TRES);
+                            SCALE_IN_HIT_CNT = 0;
+                            if (++SCALE_OUT_HIT_CNT >= EVAL_COUNT && dataCenters.size() < MAX_INSTANCE) {
+                                System.out.println("[Monitor] scaling out with SCALE_OUT_HIT_CNT=" + SCALE_OUT_HIT_CNT);
+                                launchDataCenters(DELTA);
+                                SCALE_OUT_HIT_CNT = 0;
+                                sleepDuration = COOLDOWN;
+                            }
+                        } else if (statAvg < CPU_LOWER_TRES) {
+                            System.out.println("[Monitor] stat is below CPU_LOWER_TRES=" + CPU_LOWER_TRES);
+                            SCALE_OUT_HIT_CNT = 0;
+                            if (++SCALE_IN_HIT_CNT >= EVAL_COUNT && dataCenters.size() > MIN_INSTANCE) {
+                                System.out.println("[Monitor] scaling in with SCALE_IN_HIT_CNT=" + SCALE_IN_HIT_CNT);
+                                deleteDataCenters(DELTA);
+                                SCALE_IN_HIT_CNT = 0;
+                                sleepDuration = COOLDOWN;
+                            }
+                        } else {
+                            SCALE_OUT_HIT_CNT = 0;
+                            SCALE_IN_HIT_CNT = 0;
+                            sleepDuration = EVAL_PERIOD;
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
 }
