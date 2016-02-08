@@ -16,9 +16,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
+import java.net.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -201,9 +199,21 @@ public class AutoScaler {
                             e.printStackTrace();
                         }
                     }
-                    System.out.println("[DC:Launch] Successfully launched data center " + dataCenter.getId());
+                    System.out.println("[DC:Launch] Successfully activated data center " + dataCenter.getId());
+
+                    System.out.print("[DC:Launch] Checking health state of data center " + dataCenter.getId());
+                    while (!isHealthy("http://"+getServerAddress(dataCenter))) {
+                        try {
+                            System.out.print(".");
+                            Thread.sleep(3000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    System.out.print("\n");
 
                     // notify load balancer
+                    System.out.println("[DC:Launch] Notifying load balancer for " + dataCenter.getId());
                     Map<String, String> query = new HashMap<String, String>();
                     query.put("ip", getServerAddress(dataCenter));
                     httpRequest("http://"+LB_IPADDR+":8080/add", query);
@@ -305,16 +315,9 @@ public class AutoScaler {
         String response = null;
         try {
             String path = url + "?" + createQueryString(data);
-            conn = (HttpURLConnection) new URL(path).openConnection();
-            conn.setDoInput(true);
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Content-Type", "text/plain");
-            conn.setRequestProperty("Accept-Charset", CHARSET);
-
             System.out.println("[HTTP] Sending request: " + path);
+
+            conn = openConnection(path);
             if (conn.getResponseCode() == HttpsURLConnection.HTTP_OK) {
                 BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 response = "";
@@ -334,6 +337,46 @@ public class AutoScaler {
         }
 
         return response;
+    }
+
+    /**
+     * Checks health status of instance.
+     *
+     * @return true if instance is healthy
+     */
+    public static boolean isHealthy(String url) {
+        try {
+            HttpURLConnection httpURLConnection = openConnection(url);
+            httpURLConnection.connect();
+
+            if (httpURLConnection.getResponseCode() != HttpsURLConnection.HTTP_OK) {
+                return false;
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        return true;
+    }
+
+    private static HttpURLConnection openConnection(String path) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) new URL(path).openConnection();
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Content-Type", "text/plain");
+            conn.setRequestProperty("Accept-Charset", CHARSET);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return conn;
     }
 
     /**
