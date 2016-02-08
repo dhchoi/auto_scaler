@@ -113,14 +113,30 @@ public class AutoScaler {
          * Launch data centers
          */
         for (int i = 0; i < MIN_INSTANCE; i++) {
+            Server dataCenter = launchDataCenter();
+            System.out.print("Waiting for data center to become active.");
+            while (dataCenter.getStatus() != Server.Status.ACTIVE) {
+                try {
+                    Thread.sleep(3000);
+                    System.out.print(".");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            System.out.println();
             dataCenters.add(launchDataCenter());
         }
+
         // list all running servers
+        System.out.println("/********** All Running Instances **********/");
         for (Server server : os.compute().servers().list()) {
             System.out.println(server.getId());
             System.out.println(server.getStatus());
             System.out.println(server.getAccessIPv4());
         }
+        System.out.println();
+
+        System.out.println("/********** All Running Instances (DC) **********/");
         for (Server server : dataCenters) {
             System.out.println(server.getId());
             System.out.println(server.getStatus());
