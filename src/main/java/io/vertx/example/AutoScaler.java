@@ -152,7 +152,7 @@ public class AutoScaler {
 
         Map<String, String> query = new HashMap<>();
         query.put("cooldown", "5");
-        httpRequest("http://"+LB_IPADDR+"/cooldown", query);
+        httpRequest("http://"+LB_IPADDR+":8080/cooldown", query);
     }
 
     /**
