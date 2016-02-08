@@ -29,6 +29,7 @@ public class AutoScaler {
     private static String ASG_IMAGE;
     private static String ASG_IMAGE_ID;
     private static String ASG_FLAVOR;
+    private static String ASG_FLAVOR_ID;
     private static String ASG_NAME;
     private static String LB_IPADDR;
     private static int CPU_UPPER_TRES;
@@ -48,6 +49,7 @@ public class AutoScaler {
          * read in parameters
          */
         try {
+            System.out.println("/********** All Parameters **********/");
             System.out.println("ASG_IMAGE: " + (ASG_IMAGE = String.valueOf(System.getProperty("ASG_IMAGE"))));
             System.out.println("ASG_FLAVOR: " + (ASG_FLAVOR = String.valueOf(System.getProperty("ASG_FLAVOR"))));
             System.out.println("ASG_NAME: " + (ASG_NAME = String.valueOf(System.getProperty("ASG_NAME"))));
@@ -60,6 +62,7 @@ public class AutoScaler {
             System.out.println("EVAL_COUNT: " + (EVAL_COUNT = Integer.valueOf(System.getProperty("EVAL_COUNT"))));
             System.out.println("COOLDOWN: " + (COOLDOWN = Long.valueOf(System.getProperty("COOLDOWN")) * 1000));
             System.out.println("DELTA: " + (DELTA = Integer.valueOf(System.getProperty("DELTA"))));
+            System.out.println();
         } catch (NullPointerException exception) {
             System.out.println("Insufficient parameters. Please use the following command format:\n" +
                     "\tjava -DASG_IMAGE=$ASG_IMAGE -DASG_FLAVOR=$ASG_FLAVOR -DASG_NAME=$ASG_NAME \\\n" +
@@ -87,17 +90,24 @@ public class AutoScaler {
          * Check Environment
          */
         // Find all Compute Flavors
+        System.out.println("/********** All Flavors **********/");
         for (Flavor flavor : os.compute().flavors().list()) {
             System.out.println(flavor);
+            if (flavor.getName().equals(ASG_FLAVOR)) {
+                ASG_FLAVOR_ID = flavor.getId();
+                System.out.println("Setting ASG_FLAVOR_ID=" + ASG_FLAVOR_ID + " for ASG_FLAVOR=" + ASG_FLAVOR);
+            }
         }
+        System.out.println();
         // List all Images (Glance)
+        System.out.println("/********** All Images **********/");
         for (Image image : os.images().list()) {
             System.out.println(image);
             if (image.getName().equals(ASG_IMAGE)) {
                 ASG_IMAGE_ID = image.getId();
+                System.out.println("Setting ASG_IMAGE_ID=" + ASG_IMAGE_ID + " for ASG_IMAGE=" + ASG_IMAGE);
             }
         }
-
 
         /*
          * Launch data centers
@@ -125,7 +135,7 @@ public class AutoScaler {
      */
     private static Server launchDataCenter() {
         // Create a Server Model Object
-        ServerCreate sc = Builders.server().name(ASG_NAME).flavor(ASG_FLAVOR).image(ASG_IMAGE_ID).build();
+        ServerCreate sc = Builders.server().name(ASG_NAME).flavor(ASG_FLAVOR_ID).image(ASG_IMAGE_ID).build();
 
         // Boot the Server
         return os.compute().servers().boot(sc);
