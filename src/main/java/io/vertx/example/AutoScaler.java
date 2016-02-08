@@ -84,11 +84,7 @@ public class AutoScaler {
         /*
          * Authenticate
          */
-        os = OSFactory.builder()
-                .endpoint("http://127.0.0.1:5000/v2.0")
-                .credentials("admin", "labstack")
-                .tenantName("admin")
-                .authenticate();
+        authenticate();
 
         /*
          * Check Environment
@@ -135,6 +131,14 @@ public class AutoScaler {
         }
     }
 
+    private static void authenticate() {
+        os = OSFactory.builder()
+                .endpoint("http://127.0.0.1:5000/v2.0")
+                .credentials("admin", "labstack")
+                .tenantName("admin")
+                .authenticate();
+    }
+
     /**
      * Launches specified number of Data Centers
      */
@@ -149,6 +153,8 @@ public class AutoScaler {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
+                    authenticate();
+
                     while (os.compute().servers().get(dataCenter.getId()).getStatus() != Server.Status.ACTIVE) {
                         try {
                             System.out.println("Waiting for data center " + dataCenter.getId() + " to become active.");
@@ -183,6 +189,8 @@ public class AutoScaler {
 
             @Override
             public void run() {
+                authenticate();
+
                 while (true) {
                     try {
                         System.out.println("[Monitor] Sleeping for " + sleepDuration + "ms...");
