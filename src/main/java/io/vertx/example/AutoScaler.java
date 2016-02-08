@@ -114,7 +114,7 @@ public class AutoScaler {
          */
         for (int i = 0; i < MIN_INSTANCE; i++) {
             Server dataCenter = launchDataCenter();
-            System.out.print("Waiting for data center to become active.");
+            System.out.print("Waiting for data center " + dataCenter.getId() + " to become active.");
             while (os.compute().servers().get(dataCenter.getId()).getStatus() != Server.Status.ACTIVE) {
                 try {
                     Thread.sleep(3000);
@@ -124,7 +124,7 @@ public class AutoScaler {
                 }
             }
             System.out.println("\nSuccessfully launched data center.");
-            dataCenters.add(launchDataCenter());
+            dataCenters.add(dataCenter);
         }
 
         // list all running servers
