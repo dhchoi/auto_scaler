@@ -131,16 +131,16 @@ public class AutoScaler {
         System.out.println("/********** All Running Instances **********/");
         for (Server server : os.compute().servers().list()) {
             System.out.println(server.getId());
-            System.out.println(server.getStatus());
-            System.out.println(server.getAccessIPv4());
+            System.out.println(os.compute().servers().get(server.getId()).getStatus());
+            System.out.println(os.compute().servers().get(server.getId()).getAccessIPv4());
         }
         System.out.println();
 
         System.out.println("/********** All Running Instances (DC) **********/");
         for (Server server : dataCenters) {
             System.out.println(server.getId());
-            System.out.println(server.getStatus());
-            System.out.println(server.getAccessIPv4());
+            System.out.println(os.compute().servers().get(server.getId()).getStatus());
+            System.out.println(os.compute().servers().get(server.getId()).getAccessIPv4());
         }
     }
 
