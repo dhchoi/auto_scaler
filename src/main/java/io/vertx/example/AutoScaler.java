@@ -3,6 +3,7 @@ package io.vertx.example;
 
 import org.openstack4j.api.Builders;
 import org.openstack4j.api.OSClient;
+import org.openstack4j.model.compute.Address;
 import org.openstack4j.model.compute.Flavor;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.ServerCreate;
@@ -134,7 +135,7 @@ public class AutoScaler {
         for (Server server : os.compute().servers().list()) {
             System.out.println(server.getId());
             System.out.println(os.compute().servers().get(server.getId()).getStatus());
-            System.out.println(os.compute().servers().get(server.getId()).getAccessIPv4());
+            System.out.println(getServerAddress(server));
         }
         System.out.println();
 
@@ -142,7 +143,7 @@ public class AutoScaler {
         for (Server server : dataCenters) {
             System.out.println(server.getId());
             System.out.println(os.compute().servers().get(server.getId()).getStatus());
-            System.out.println(os.compute().servers().get(server.getId()).getAccessIPv4());
+            System.out.println(getServerAddress(server));
         }
 
         /*
@@ -164,6 +165,16 @@ public class AutoScaler {
                 .credentials("admin", "labstack")
                 .tenantName("demo")
                 .authenticate();
+    }
+
+    private static String getServerAddress(Server server) {
+        String address = "";
+        Map<String, List<? extends Address>> addresses = os.compute().servers().get(server.getId()).getAddresses().getAddresses();
+        for (String key : addresses.keySet()) {
+            address = addresses.get(key).get(0).getAddr();
+        }
+
+        return address;
     }
 
     /**
@@ -191,7 +202,11 @@ public class AutoScaler {
                         }
                     }
                     System.out.println("[DC:Launch] Successfully launched data center " + dataCenter.getId());
-                    // TODO: add to load balancer
+
+                    // notify load balancer
+                    Map<String, String> query = new HashMap<String, String>();
+                    query.put("ip", getServerAddress(dataCenter));
+                    httpRequest("http://"+LB_IPADDR+":8080/add", query);
                 }
             }).start();
         }
@@ -208,7 +223,11 @@ public class AutoScaler {
 
             // delete the data center
             os.compute().servers().delete(dataCenter.getId());
-            // TODO: remove from load balancer
+
+            // notify load balancer
+            Map<String, String> query = new HashMap<String, String>();
+            query.put("ip", getServerAddress(dataCenter));
+            httpRequest("http://"+LB_IPADDR+":8080/remove", query);
         }
     }
 
