@@ -6,6 +6,7 @@ import org.openstack4j.api.OSClient;
 import org.openstack4j.model.compute.Flavor;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.ServerCreate;
+import org.openstack4j.model.image.Image;
 import org.openstack4j.openstack.OSFactory;
 
 import java.util.ArrayList;
@@ -46,18 +47,18 @@ public class AutoScaler {
          * read in parameters
          */
         try {
-            System.out.println(ASG_IMAGE = String.valueOf(System.getProperty("ASG_IMAGE")));
-            System.out.println(ASG_FLAVOR = String.valueOf(System.getProperty("ASG_FLAVOR")));
-            System.out.println(ASG_NAME = String.valueOf(System.getProperty("ASG_NAME")));
-            System.out.println(LB_IPADDR = String.valueOf(System.getProperty("LB_IPADDR")));
-            System.out.println(CPU_UPPER_TRES = Integer.valueOf(System.getProperty("CPU_UPPER_TRES")));
-            System.out.println(CPU_LOWER_TRES = Integer.valueOf(System.getProperty("CPU_LOWER_TRES")));
-            System.out.println(MIN_INSTANCE = Integer.valueOf(System.getProperty("MIN_INSTANCE")));
-            System.out.println(MAX_INSTANCE = Integer.valueOf(System.getProperty("MAX_INSTANCE")));
-            System.out.println(EVAL_PERIOD = Long.valueOf(System.getProperty("EVAL_PERIOD")) * 1000);
-            System.out.println(EVAL_COUNT = Integer.valueOf(System.getProperty("EVAL_COUNT")));
-            System.out.println(COOLDOWN = Long.valueOf(System.getProperty("COOLDOWN")) * 1000);
-            System.out.println(DELTA = Integer.valueOf(System.getProperty("DELTA")));
+            System.out.println("ASG_IMAGE: " + (ASG_IMAGE = String.valueOf(System.getProperty("ASG_IMAGE"))));
+            System.out.println("ASG_FLAVOR: " + (ASG_FLAVOR = String.valueOf(System.getProperty("ASG_FLAVOR"))));
+            System.out.println("ASG_NAME: " + (ASG_NAME = String.valueOf(System.getProperty("ASG_NAME"))));
+            System.out.println("LB_IPADDR: " + (LB_IPADDR = String.valueOf(System.getProperty("LB_IPADDR"))));
+            System.out.println("CPU_UPPER_TRES: " + (CPU_UPPER_TRES = Integer.valueOf(System.getProperty("CPU_UPPER_TRES"))));
+            System.out.println("CPU_LOWER_TRES: " + (CPU_LOWER_TRES = Integer.valueOf(System.getProperty("CPU_LOWER_TRES"))));
+            System.out.println("MIN_INSTANCE: " + (MIN_INSTANCE = Integer.valueOf(System.getProperty("MIN_INSTANCE"))));
+            System.out.println("MAX_INSTANCE: " + (MAX_INSTANCE = Integer.valueOf(System.getProperty("MAX_INSTANCE"))));
+            System.out.println("EVAL_PERIOD: " + (EVAL_PERIOD = Long.valueOf(System.getProperty("EVAL_PERIOD")) * 1000));
+            System.out.println("EVAL_COUNT: " + (EVAL_COUNT = Integer.valueOf(System.getProperty("EVAL_COUNT"))));
+            System.out.println("COOLDOWN: " + (COOLDOWN = Long.valueOf(System.getProperty("COOLDOWN")) * 1000));
+            System.out.println("DELTA: " + (DELTA = Integer.valueOf(System.getProperty("DELTA"))));
         } catch (NullPointerException exception) {
             System.out.println("Insufficient parameters. Please use the following command format:\n" +
                     "\tjava -DASG_IMAGE=$ASG_IMAGE -DASG_FLAVOR=$ASG_FLAVOR -DASG_NAME=$ASG_NAME \\\n" +
@@ -82,26 +83,34 @@ public class AutoScaler {
                 .authenticate();
 
         /*
-         * Test
+         * Check Environment
          */
-        List<? extends Flavor> flavors = os.compute().flavors().list();
-        for (Flavor flavor : flavors) {
+        // Find all Compute Flavors
+        for (Flavor flavor : os.compute().flavors().list()) {
             System.out.println(flavor);
         }
-
-        for (int i = 0; i < MIN_INSTANCE; i++) {
-            dataCenters.add(launchDataCenter());
-            dataCenters.add(launchDataCenter());
+        // List all Images (Glance)
+        for (Image image : os.images().list()) {
+            System.out.println(image);
         }
 
+
+        /*
+         * Launch data centers
+         */
+        for (int i = 0; i < MIN_INSTANCE; i++) {
+            dataCenters.add(launchDataCenter());
+        }
+        // list all running servers
         for (Server server : os.compute().servers().list()) {
             System.out.println(server.getId());
             System.out.println(server.getStatus());
             System.out.println(server.getAccessIPv4());
         }
-
         for (Server server : dataCenters) {
-            
+            System.out.println(server.getId());
+            System.out.println(server.getStatus());
+            System.out.println(server.getAccessIPv4());
         }
     }
 
