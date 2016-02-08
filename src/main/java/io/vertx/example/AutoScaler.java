@@ -129,6 +129,11 @@ public class AutoScaler {
             System.out.println(os.compute().servers().get(server.getId()).getStatus());
             System.out.println(os.compute().servers().get(server.getId()).getAccessIPv4());
         }
+
+        /*
+         * Start monitoring
+         */
+        startMonitoring();
     }
 
     private static void authenticate() {
@@ -157,13 +162,13 @@ public class AutoScaler {
 
                     while (os.compute().servers().get(dataCenter.getId()).getStatus() != Server.Status.ACTIVE) {
                         try {
-                            System.out.println("Waiting for data center " + dataCenter.getId() + " to become active.");
+                            System.out.println("[DC:Launch] Waiting for data center " + dataCenter.getId() + " to become active.");
                             Thread.sleep(3000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
-                    System.out.println("Successfully launched data center " + dataCenter.getId());
+                    System.out.println("[DC:Launch] Successfully launched data center " + dataCenter.getId());
                     // TODO: add to load balancer
                 }
             }).start();
@@ -177,6 +182,8 @@ public class AutoScaler {
         for (int i = 0; i < num; i++) {
             // get the latest data center
             Server dataCenter = dataCenters.remove(dataCenters.size() - 1);
+            System.out.println("[DC:Launch] Deleting data center " + dataCenter.getId());
+
             // delete the data center
             os.compute().servers().delete(dataCenter.getId());
             // TODO: remove from load balancer
