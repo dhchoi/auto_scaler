@@ -140,7 +140,7 @@ public class AutoScaler {
         os = OSFactory.builder()
                 .endpoint("http://127.0.0.1:5000/v2.0")
                 .credentials("admin", "labstack")
-                .tenantName("admin")
+                .tenantName("demo")
                 .authenticate();
     }
 
@@ -218,8 +218,8 @@ public class AutoScaler {
                         statAvg = statAvg / stats.size();
                         System.out.println("[Monitor] cpu_util=" + statAvg);
 
-                        if (statAvg > CPU_UPPER_TRES) {
-                            System.out.println("[Monitor] stat is above CPU_UPPER_TRES=" + CPU_UPPER_TRES);
+                        if (statAvg > CPU_LOWER_TRES) { // scale out
+                            System.out.println("[Monitor] stat is above CPU_LOWER_TRES=" + CPU_LOWER_TRES);
                             SCALE_IN_HIT_CNT = 0;
                             if (++SCALE_OUT_HIT_CNT >= EVAL_COUNT && dataCenters.size() < MAX_INSTANCE) {
                                 System.out.println("[Monitor] scaling out with SCALE_OUT_HIT_CNT=" + SCALE_OUT_HIT_CNT);
@@ -227,8 +227,8 @@ public class AutoScaler {
                                 SCALE_OUT_HIT_CNT = 0;
                                 sleepDuration = COOLDOWN;
                             }
-                        } else if (statAvg < CPU_LOWER_TRES) {
-                            System.out.println("[Monitor] stat is below CPU_LOWER_TRES=" + CPU_LOWER_TRES);
+                        } else if (statAvg < CPU_UPPER_TRES) { // scale in
+                            System.out.println("[Monitor] stat is below CPU_UPPER_TRES=" + CPU_UPPER_TRES);
                             SCALE_OUT_HIT_CNT = 0;
                             if (++SCALE_IN_HIT_CNT >= EVAL_COUNT && dataCenters.size() > MIN_INSTANCE) {
                                 System.out.println("[Monitor] scaling in with SCALE_IN_HIT_CNT=" + SCALE_IN_HIT_CNT);
