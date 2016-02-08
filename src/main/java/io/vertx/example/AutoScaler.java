@@ -7,11 +7,20 @@ import org.openstack4j.model.compute.Flavor;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.ServerCreate;
 import org.openstack4j.model.image.Image;
-import org.openstack4j.model.telemetry.SampleCriteria;
 import org.openstack4j.model.telemetry.Statistics;
 import org.openstack4j.openstack.OSFactory;
 
+import javax.net.ssl.HttpsURLConnection;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -44,6 +53,12 @@ public class AutoScaler {
     private static int DELTA;
     private static int SCALE_OUT_HIT_CNT = 0;
     private static int SCALE_IN_HIT_CNT = 0;
+
+    /**
+     * Helper Variables
+     */
+    private static final String CHARSET = "UTF-8";
+
 
     /**
      * Main function
@@ -134,8 +149,15 @@ public class AutoScaler {
          * Start monitoring
          */
         startMonitoring();
+
+        Map<String, String> query = new HashMap<>();
+        query.put("cooldown", "5");
+        httpRequest("http://"+LB_IPADDR+"/cooldown", query);
     }
 
+    /**
+     * Authenticate user
+     */
     private static void authenticate() {
         os = OSFactory.builder()
                 .endpoint("http://127.0.0.1:5000/v2.0")
@@ -190,6 +212,9 @@ public class AutoScaler {
         }
     }
 
+    /**
+     * Monitor metering
+     */
     private static void startMonitoring() {
         new Thread(new Runnable() {
             private long sleepDuration = EVAL_PERIOD;
@@ -247,5 +272,74 @@ public class AutoScaler {
                 }
             }
         }).start();
+    }
+
+    /**
+     * Sends out HTTP GET requests
+     *
+     * @param url
+     * @param data
+     * @return
+     */
+    private static String httpRequest(String url, Map<String, String> data) {
+        HttpURLConnection conn = null;
+        String response = null;
+        try {
+            String path = url + "?" + createQueryString(data);
+            conn = (HttpURLConnection) new URL(path).openConnection();
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Content-Type", "text/plain");
+            conn.setRequestProperty("Accept-Charset", CHARSET);
+
+            System.out.println("[HTTP] Sending request: " + path);
+            if (conn.getResponseCode() == HttpsURLConnection.HTTP_OK) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                response = "";
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response += line;
+                }
+                System.out.println("[HTTP] Request success with response: " + response);
+            } else {
+                System.out.println("[HTTP] Bad http response code: " + conn.getResponseCode());
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            conn.disconnect();
+        }
+
+        return response;
+    }
+
+    /**
+     * Helper for creating query strings
+     *
+     * @param params
+     * @return
+     */
+    private static String createQueryString(Map<String, String> params) {
+        if (params == null || params.isEmpty()) {
+            return null;
+        }
+
+        String paramsAsString = "";
+        try {
+            for (String key : params.keySet()) {
+                if (!paramsAsString.isEmpty()) {
+                    paramsAsString += "&";
+                }
+                paramsAsString += key + "=" + URLEncoder.encode(params.get(key), CHARSET);
+            }
+        } catch (UnsupportedEncodingException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return paramsAsString;
     }
 }
