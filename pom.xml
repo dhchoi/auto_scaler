@@ -11,7 +11,7 @@
 
   <properties>
     <!-- the main class -->
-    <exec.mainClass>io.vertx.example.Server</exec.mainClass>
+    <exec.mainClass>io.vertx.example.AutoScaler</exec.mainClass>
   </properties>
 
   <dependencies>

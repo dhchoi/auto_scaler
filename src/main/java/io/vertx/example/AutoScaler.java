@@ -1,21 +1,26 @@
 package io.vertx.example;
 
 
+import org.openstack4j.api.Builders;
 import org.openstack4j.api.OSClient;
 import org.openstack4j.model.compute.Flavor;
+import org.openstack4j.model.compute.Server;
+import org.openstack4j.model.compute.ServerCreate;
 import org.openstack4j.openstack.OSFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * AutoScaling server
  */
-public class Server {
+public class AutoScaler {
 
     /**
      * OpenStack4j configuration
      */
     private static OSClient os;
+    private static List<Server> dataCenters = new ArrayList<>();
 
     /**
      * ASG Variables
@@ -71,7 +76,7 @@ public class Server {
          * Authenticate
          */
         os = OSFactory.builder()
-                .endpoint("http://172.30.0.183:5000/")
+                .endpoint("http://127.0.0.1:5000/v2.0")
                 .credentials("admin", "labstack")
                 .tenantName("admin")
                 .authenticate();
@@ -83,5 +88,33 @@ public class Server {
         for (Flavor flavor : flavors) {
             System.out.println(flavor);
         }
+
+        for (int i = 0; i < MIN_INSTANCE; i++) {
+            dataCenters.add(launchDataCenter());
+            dataCenters.add(launchDataCenter());
+        }
+
+        for (Server server : os.compute().servers().list()) {
+            System.out.println(server.getId());
+            System.out.println(server.getStatus());
+            System.out.println(server.getAccessIPv4());
+        }
+
+        for (Server server : dataCenters) {
+            
+        }
+    }
+
+    /**
+     * Launches a Data Center
+     *
+     * @return the launched DC
+     */
+    private static Server launchDataCenter() {
+        // Create a Server Model Object
+        ServerCreate sc = Builders.server().name(ASG_NAME).flavor(ASG_FLAVOR).image(ASG_IMAGE).build();
+
+        // Boot the Server
+        return os.compute().servers().boot(sc);
     }
 }
