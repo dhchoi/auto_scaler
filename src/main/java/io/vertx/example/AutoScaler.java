@@ -27,6 +27,7 @@ public class AutoScaler {
      * ASG Variables
      */
     private static String ASG_IMAGE;
+    private static String ASG_IMAGE_ID;
     private static String ASG_FLAVOR;
     private static String ASG_NAME;
     private static String LB_IPADDR;
@@ -92,6 +93,9 @@ public class AutoScaler {
         // List all Images (Glance)
         for (Image image : os.images().list()) {
             System.out.println(image);
+            if (image.getName().equals(ASG_IMAGE)) {
+                ASG_IMAGE_ID = image.getId();
+            }
         }
 
 
@@ -121,7 +125,7 @@ public class AutoScaler {
      */
     private static Server launchDataCenter() {
         // Create a Server Model Object
-        ServerCreate sc = Builders.server().name(ASG_NAME).flavor(ASG_FLAVOR).image(ASG_IMAGE).build();
+        ServerCreate sc = Builders.server().name(ASG_NAME).flavor(ASG_FLAVOR).image(ASG_IMAGE_ID).build();
 
         // Boot the Server
         return os.compute().servers().boot(sc);
