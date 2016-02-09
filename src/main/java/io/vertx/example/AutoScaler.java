@@ -148,10 +148,6 @@ public class AutoScaler {
          * Start monitoring
          */
         startMonitoring();
-
-        Map<String, String> query = new HashMap<>();
-        query.put("cooldown", "5");
-        httpRequest("http://"+LB_IPADDR+":8080/cooldown", query);
     }
 
     /**
