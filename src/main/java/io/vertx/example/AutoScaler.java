@@ -8,6 +8,7 @@ import org.openstack4j.model.compute.Flavor;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.ServerCreate;
 import org.openstack4j.model.image.Image;
+import org.openstack4j.model.telemetry.SampleCriteria;
 import org.openstack4j.model.telemetry.Statistics;
 import org.openstack4j.openstack.OSFactory;
 
@@ -17,9 +18,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -57,6 +58,7 @@ public class AutoScaler {
      * Helper Variables
      */
     private static final String CHARSET = "UTF-8";
+    private static Date startupTime = null;
 
 
     /**
@@ -94,6 +96,8 @@ public class AutoScaler {
             System.out.println("Ill-formatted parameters. Please check if the numbers were provided correctly.");
             System.exit(0);
         }
+        startupTime = new Date();
+        System.out.println("Program started at " + formatTime(startupTime));
 
         /*
          * Authenticate
@@ -252,7 +256,11 @@ public class AutoScaler {
                         System.out.println("[Monitor] Sleeping for " + sleepDuration + "ms...");
                         Thread.sleep(sleepDuration);
 
-                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", (int) sleepDuration / 1000);
+                        // build filter
+                        SampleCriteria sampleCriteria = SampleCriteria.create().timestamp(SampleCriteria.Oper.GTE, startupTime);
+                        // query statistics
+                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", sampleCriteria, (int) sleepDuration / 1000);
+                        // get query result
                         Statistics statistics = stats.get(stats.size() - 1); // most recent statistic during the interval
                         System.out.println("[Monitor] stats.get(stats.size()-1)=" + statistics);
                         double statAvg = statistics.getAvg();
@@ -390,5 +398,11 @@ public class AutoScaler {
         }
 
         return paramsAsString;
+    }
+
+    private static String formatTime(Date date) {
+        DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return formatter.format(date);
     }
 }
