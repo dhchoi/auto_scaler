@@ -97,7 +97,7 @@ public class AutoScaler {
             System.exit(0);
         }
         startupTime = new Date();
-        System.out.println("Program started at " + formatTime(startupTime));
+        System.out.println("Program started at " + formatTime(startupTime) + "\n");
 
         /*
          * Authenticate
@@ -147,6 +147,21 @@ public class AutoScaler {
             System.out.println(os.compute().servers().get(server.getId()).getStatus());
             System.out.println(getServerAddress(server));
         }
+
+        /*
+         * Shutdown hook for cleanup
+         */
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                authenticate();
+
+                System.out.println("\n----------------------------\nReceived kill signal.");
+                System.out.println("Deleting all data centers...");
+                deleteDataCenters(dataCenters.size());
+                System.out.println("Shutting down...");
+            }
+        });
 
         /*
          * Start monitoring
@@ -228,12 +243,13 @@ public class AutoScaler {
         for (int i = 0; i < num; i++) {
             // get the latest data center
             Server dataCenter = dataCenters.remove(dataCenters.size() - 1);
-            System.out.println("[DC:Launch] Deleting data center " + dataCenter.getId());
+            System.out.println("[DC:Delete] Deleting data center " + dataCenter.getId());
 
             // delete the data center
             os.compute().servers().delete(dataCenter.getId());
 
             // notify load balancer
+            System.out.println("[DC:Delete] Notifying load balancer for " + dataCenter.getId());
             Map<String, String> query = new HashMap<String, String>();
             query.put("ip", getServerAddress(dataCenter));
             httpRequest("http://" + LB_IPADDR + ":8080/remove", query);
