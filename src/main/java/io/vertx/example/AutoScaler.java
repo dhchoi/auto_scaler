@@ -197,10 +197,9 @@ public class AutoScaler {
                     }
                     System.out.println("[DC:Launch] Successfully activated data center " + dataCenter.getId());
 
-                    System.out.print("[DC:Launch] Checking health state of data center " + dataCenter.getId());
-                    while (!isHealthy("http://" + getServerAddress(dataCenter))) {
+                    System.out.println("[DC:Launch] Checking health state of data center " + dataCenter.getId());
+                    while (!isHealthy(dataCenter)) {
                         try {
-                            System.out.print(".");
                             Thread.sleep(3000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
@@ -331,7 +330,8 @@ public class AutoScaler {
      *
      * @return true if instance is healthy
      */
-    public static boolean isHealthy(String url) {
+    public static boolean isHealthy(Server dataCenter) {
+        String url = "http://" + getServerAddress(dataCenter);
         try {
             HttpURLConnection httpURLConnection = openConnection(url);
             httpURLConnection.connect();
@@ -341,7 +341,7 @@ public class AutoScaler {
             }
 
         } catch (IOException e) {
-            System.out.println("[DC:Launch] unhealthy: " + url + " (" + e.getMessage() + ")");
+            System.out.println("[DC:Launch] Unhealthy data center " + dataCenter.getId() + " at " + url + " (" + e.getMessage() + ")");
             return false;
         }
 
@@ -355,7 +355,7 @@ public class AutoScaler {
             conn.setDoInput(true);
             conn.setDoOutput(true);
             conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
+            conn.setReadTimeout(10000);
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Content-Type", "text/plain");
             conn.setRequestProperty("Accept-Charset", CHARSET);
