@@ -292,6 +292,9 @@ public class AutoScaler {
                                     SCALE_OUT_HIT_CNT = 0;
                                     sleepDuration = COOLDOWN;
                                 }
+                                else {
+                                    sleepDuration = EVAL_PERIOD;
+                                }
                             } else if (statAvg < CPU_LOWER_TRES) { // scale in
                                 System.out.println("[Monitor] stat is below CPU_LOWER_TRES=" + CPU_LOWER_TRES);
                                 SCALE_OUT_HIT_CNT = 0;
@@ -300,6 +303,9 @@ public class AutoScaler {
                                     deleteDataCenters(DELTA);
                                     SCALE_IN_HIT_CNT = 0;
                                     sleepDuration = COOLDOWN;
+                                }
+                                else {
+                                    sleepDuration = EVAL_PERIOD;
                                 }
                             } else {
                                 SCALE_OUT_HIT_CNT = 0;
