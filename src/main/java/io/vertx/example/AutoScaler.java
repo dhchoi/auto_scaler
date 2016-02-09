@@ -198,7 +198,7 @@ public class AutoScaler {
                     System.out.println("[DC:Launch] Successfully activated data center " + dataCenter.getId());
 
                     System.out.print("[DC:Launch] Checking health state of data center " + dataCenter.getId());
-                    while (!isHealthy("http://"+getServerAddress(dataCenter))) {
+                    while (!isHealthy("http://" + getServerAddress(dataCenter))) {
                         try {
                             System.out.print(".");
                             Thread.sleep(3000);
@@ -212,7 +212,7 @@ public class AutoScaler {
                     System.out.println("[DC:Launch] Notifying load balancer for " + dataCenter.getId());
                     Map<String, String> query = new HashMap<String, String>();
                     query.put("ip", getServerAddress(dataCenter));
-                    httpRequest("http://"+LB_IPADDR+":8080/add", query);
+                    httpRequest("http://" + LB_IPADDR + ":8080/add", query);
                 }
             }).start();
         }
@@ -233,7 +233,7 @@ public class AutoScaler {
             // notify load balancer
             Map<String, String> query = new HashMap<String, String>();
             query.put("ip", getServerAddress(dataCenter));
-            httpRequest("http://"+LB_IPADDR+":8080/remove", query);
+            httpRequest("http://" + LB_IPADDR + ":8080/remove", query);
         }
     }
 
@@ -253,10 +253,10 @@ public class AutoScaler {
                         System.out.println("[Monitor] Sleeping for " + sleepDuration + "ms...");
                         Thread.sleep(sleepDuration);
 
-                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", (int)sleepDuration/1000);
-                        Statistics statistics = stats.get(stats.size()-1); // most recent statistic during the interval
-                        System.out.println(statistics);
-                        double  statAvg = statistics.getAvg();
+                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", (int) sleepDuration / 1000);
+                        Statistics statistics = stats.get(stats.size() - 1); // most recent statistic during the interval
+                        System.out.println("[Monitor] stats.get(stats.size()-1)=" + statistics);
+                        double statAvg = statistics.getAvg();
                         System.out.println("[Monitor] cpu_util=" + statAvg);
 
                         if (statAvg > CPU_LOWER_TRES) { // scale out
@@ -341,7 +341,7 @@ public class AutoScaler {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
             return false;
         }
 
@@ -360,7 +360,7 @@ public class AutoScaler {
             conn.setRequestProperty("Content-Type", "text/plain");
             conn.setRequestProperty("Accept-Charset", CHARSET);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
 
         return conn;
