@@ -341,7 +341,7 @@ public class AutoScaler {
             }
 
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("[DC:Launch] unhealthy: " + url + " (" + e.getMessage() + ")");
             return false;
         }
 
