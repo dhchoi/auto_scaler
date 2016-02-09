@@ -257,19 +257,10 @@ public class AutoScaler {
                         System.out.println("[Monitor] Sleeping for " + sleepDuration + "ms...");
                         Thread.sleep(sleepDuration);
 
-//                        SampleCriteria sampleCriteria = SampleCriteria.create();
-//                        for (Server server : dataCenters) {
-//                            sampleCriteria.add("id", SampleCriteria.Oper.EQUALS, server.getId());
-//                        }
-
-                        double statAvg = 0;
-                        //List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", sampleCriteria);
-                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util");
-                        for (Statistics statistics : stats) {
-                            System.out.println(statistics);
-                            statAvg += statistics.getAvg();
-                        }
-                        statAvg = statAvg / stats.size();
+                        List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", (int)sleepDuration/1000);
+                        Statistics statistics = stats.get(stats.size()-1); // most recent statistic during the interval
+                        System.out.println(statistics);
+                        double  statAvg = statistics.getAvg();
                         System.out.println("[Monitor] cpu_util=" + statAvg);
 
                         if (statAvg > CPU_LOWER_TRES) { // scale out
