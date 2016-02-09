@@ -261,33 +261,35 @@ public class AutoScaler {
                         // query statistics
                         List<? extends Statistics> stats = os.telemetry().meters().statistics("cpu_util", sampleCriteria, (int) sleepDuration / 1000);
                         // get query result
-                        Statistics statistics = stats.get(stats.size() - 1); // most recent statistic during the interval
-                        System.out.println("[Monitor] stats.get(stats.size()-1)=" + statistics);
-                        double statAvg = statistics.getAvg();
-                        System.out.println("[Monitor] cpu_util=" + statAvg);
+                        if (stats.size() > 0) {
+                            Statistics statistics = stats.get(stats.size() - 1); // most recent statistic during the interval
+                            System.out.println("[Monitor] stats.get(stats.size()-1)=" + statistics);
+                            double statAvg = statistics.getAvg();
+                            System.out.println("[Monitor] cpu_util=" + statAvg);
 
-                        if (statAvg > CPU_LOWER_TRES) { // scale out
-                            System.out.println("[Monitor] stat is above CPU_LOWER_TRES=" + CPU_LOWER_TRES);
-                            SCALE_IN_HIT_CNT = 0;
-                            if (++SCALE_OUT_HIT_CNT >= EVAL_COUNT && dataCenters.size() < MAX_INSTANCE) {
-                                System.out.println("[Monitor] scaling out with SCALE_OUT_HIT_CNT=" + SCALE_OUT_HIT_CNT);
-                                launchDataCenters(DELTA);
-                                SCALE_OUT_HIT_CNT = 0;
-                                sleepDuration = COOLDOWN;
-                            }
-                        } else if (statAvg < CPU_UPPER_TRES) { // scale in
-                            System.out.println("[Monitor] stat is below CPU_UPPER_TRES=" + CPU_UPPER_TRES);
-                            SCALE_OUT_HIT_CNT = 0;
-                            if (++SCALE_IN_HIT_CNT >= EVAL_COUNT && dataCenters.size() > MIN_INSTANCE) {
-                                System.out.println("[Monitor] scaling in with SCALE_IN_HIT_CNT=" + SCALE_IN_HIT_CNT);
-                                deleteDataCenters(DELTA);
+                            if (statAvg > CPU_LOWER_TRES) { // scale out
+                                System.out.println("[Monitor] stat is above CPU_LOWER_TRES=" + CPU_LOWER_TRES);
                                 SCALE_IN_HIT_CNT = 0;
-                                sleepDuration = COOLDOWN;
+                                if (++SCALE_OUT_HIT_CNT >= EVAL_COUNT && dataCenters.size() < MAX_INSTANCE) {
+                                    System.out.println("[Monitor] scaling out with SCALE_OUT_HIT_CNT=" + SCALE_OUT_HIT_CNT);
+                                    launchDataCenters(DELTA);
+                                    SCALE_OUT_HIT_CNT = 0;
+                                    sleepDuration = COOLDOWN;
+                                }
+                            } else if (statAvg < CPU_UPPER_TRES) { // scale in
+                                System.out.println("[Monitor] stat is below CPU_UPPER_TRES=" + CPU_UPPER_TRES);
+                                SCALE_OUT_HIT_CNT = 0;
+                                if (++SCALE_IN_HIT_CNT >= EVAL_COUNT && dataCenters.size() > MIN_INSTANCE) {
+                                    System.out.println("[Monitor] scaling in with SCALE_IN_HIT_CNT=" + SCALE_IN_HIT_CNT);
+                                    deleteDataCenters(DELTA);
+                                    SCALE_IN_HIT_CNT = 0;
+                                    sleepDuration = COOLDOWN;
+                                }
+                            } else {
+                                SCALE_OUT_HIT_CNT = 0;
+                                SCALE_IN_HIT_CNT = 0;
+                                sleepDuration = EVAL_PERIOD;
                             }
-                        } else {
-                            SCALE_OUT_HIT_CNT = 0;
-                            SCALE_IN_HIT_CNT = 0;
-                            sleepDuration = EVAL_PERIOD;
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
